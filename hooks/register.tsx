@@ -323,15 +323,20 @@ export const register: Register = on => {
       if (s.done) parts.push(<Text><Text color={C.ok}>✓ </Text>{s.done} done</Text>)
       if (s.needs) parts.push(<Text color={C.warn} bold>! {s.needs} needs you</Text>)
       const joined = parts.flatMap((p, i) => (i ? [<Text dimColor>{'  ·  '}</Text>, p] : [p]))
+      // Nothing to count: /stand hangs on the last row instead of standing alone
+      const hang = parts.length ? null : g ? 'block' : !isOpen && ctxHigh ? 'ctx' : null
       return (
         <Box flexDirection="column">
           {list}
-          {!isOpen && ctxHigh && ctxRow()}
-          {blockLine(false)}
-          <Box>
-            {joined as never}
-            <Hint />
-          </Box>
+          {!isOpen && ctxHigh && ctxRow(hang === 'ctx')}
+          {blockLine(hang === 'block')}
+          {parts.length > 0 && (
+            <Box>
+              {joined as never}
+              <Hint />
+            </Box>
+          )}
+          {!parts.length && !hang && <Text dimColor>/stand</Text>}
         </Box>
       )
     }
