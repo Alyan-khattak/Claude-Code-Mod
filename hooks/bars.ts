@@ -14,11 +14,11 @@ export function meter(pct: number, width: number): [string, string] {
   return ['━'.repeat(n), '─'.repeat(width - n)]
 }
 
-// loud: braille halftone. Its dots leave a gap at the cell edge, so stacked rows stay apart.
+// loud: shade blocks like the original look. They fill the whole cell, so on a tight line height stacked bars touch.
 export const DOT = '·'
-const FULL = '⣿'
-// Sparse to dense, the comet's tail fades in behind a solid head
-const RAMP = ['⠡', '⠫', '⡻', '⣻']
+const FULL = '▓'
+// Light to dense, the comet's tail fades in behind a solid head
+const RAMP = ['░', '░', '▒', '▓']
 const HEAD = [...RAMP, FULL, FULL]
 
 export function loudScanner(frame: number, width: number): [string, string, string] {

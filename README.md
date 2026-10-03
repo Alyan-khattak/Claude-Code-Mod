@@ -5,11 +5,11 @@
 A Claude Code mod that puts a small control room above your prompt: background agents and shells with a live scanner and elapsed time, what finished, what failed, how much disk is left, and when your context is getting full.
 
 ```
-✳ running    Caltrack Build 32         ·······⠡⠫⡻⣻⣿⣿·      0:24
-✳ running    Review Tier-Badge         ⡻⣻⣿⣿··········      0:23
-✓ done       Session-Scan              ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿      0:06
-! needs you  Preview deploy            ⣿⡻⠡···········    failed
-             disk · 74 GB free         ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣻⡻··      84 %
+✳ running    Caltrack Build 32         ·······░░▒▓▓▓·      0:24
+✳ running    Review Tier-Badge         ▒▓▓▓··········      0:23
+✓ done       Session-Scan              ▓▓▓▓▓▓▓▓▓▓▓▓▓▓      0:06
+! needs you  Preview deploy            ▓▒░···········    failed
+             disk · 74 GB free         ▓▓▓▓▓▓▓▓▓▓▓▒··      84 %
 ✳ 2 running  ·  ✓ 1 done  ·  ! 1 needs you     /stand
 ```
 
