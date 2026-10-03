@@ -46,23 +46,13 @@ When a hook of yours blocks a tool call, Leitstand shows the hook's name and its
 
 ## Two themes
 
-**loud** is the default. The list stays open while anything runs, with halftone bars. Closed, it is one line that counts everything.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/loud-folded-dark.png">
-  <img alt="Loud theme closed: one line that says 2 running" src="docs/loud-folded-light.png" width="696">
-</picture>
+**loud** is the default. The list stays open while anything runs, with halftone bars. Finished and failed jobs stay until your next prompt.
 
 **quiet** shows one line while jobs run, with thin bars when you open it. Finished and failed jobs disappear immediately. The disk shows only when it runs low.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/quiet-folded-dark.png">
-  <img alt="Quiet theme folded: one line that says 2 running" src="docs/quiet-folded-light.png" width="696">
-</picture>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/quiet-open-dark.png">
-  <img alt="Quiet theme open: two running jobs with thin line bars and the context row" src="docs/quiet-open-light.png" width="696">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/themes-dark.png">
+  <img alt="Both themes side by side. Loud closed: one line with 2 running. Loud open: two running jobs, one done, one failed, the disk and a footer. Quiet closed: one line with 2 running. Quiet open: two running jobs with thin bars and the context row." src="docs/themes-light.png" width="912">
 </picture>
 
 To use quiet, set the variable before you start Claude Code:
