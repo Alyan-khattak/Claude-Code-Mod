@@ -1,0 +1,14 @@
+{
+  "name": "leitstand",
+  "owner": {
+    "name": "Dominik Martin"
+  },
+  "description": "Leitstand, a control room above your Claude Code prompt.",
+  "plugins": [
+    {
+      "name": "leitstand",
+      "source": "./",
+      "description": "A control room above your prompt. Two themes, loud and quiet."
+    }
+  ]
+}
