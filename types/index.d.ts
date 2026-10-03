@@ -1,6 +1,7 @@
 export type Disk = {
   pct: number | null
   freeGb: number | null
+  // Time of the last good measurement
   at: number
   error: string | null
 }
@@ -26,6 +27,8 @@ declare module 'claude-code' {
       diskSeen: 'ok' | 'warn' | 'bad'
       ctx: { tokens: number; window: number; pct: number } | null
       block: { hook: string; reason: string } | null
+      // Endings that arrived before their job had its background id
+      early: { id: string; status: 'running' | 'done' | 'failed' }[]
     }
   }
 }

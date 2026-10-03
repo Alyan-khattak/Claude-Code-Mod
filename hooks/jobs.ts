@@ -29,14 +29,24 @@ export function summary(jobs: Job[], diskNeeds: boolean) {
   return { running: count('running'), done: count('done'), failed, needs: failed + (diskNeeds ? 1 : 0) }
 }
 
-// Ended jobs stay until seen: loud shows them, quiet hides them
+export type Ending = { id: string; status: Job['status'] }
+
+// Ended jobs stay until seen: loud shows them, quiet hides them.
+// Endings for ids not in the list yet come back, so a notification that beats the id rewrite is not lost.
+export function applyEndings(list: Job[], endings: Ending[], at: number): { list: Job[]; unmatched: Ending[] } {
+  const ended = new Map(endings.map(d => [d.id, d.status]))
+  const known = new Set(list.map(j => j.id))
+  return {
+    list: list.map(j => {
+      const status = ended.get(j.id)
+      return status && j.status === 'running' ? { ...j, status, endedAt: at } : j
+    }),
+    unmatched: endings.filter(d => !known.has(d.id)),
+  }
+}
+
 export function applyNotifications(list: Job[], raw: string, at: number): Job[] {
-  const ended = new Map(notifications(raw).map(d => [d.id, d.status]))
-  if (!ended.size) return list
-  return list.map(j => {
-    const status = ended.get(j.id)
-    return status && j.status === 'running' ? { ...j, status, endedAt: at } : j
-  })
+  return applyEndings(list, notifications(raw), at).list
 }
 
 export const running = (list: Job[]) => list.filter(j => j.status === 'running')

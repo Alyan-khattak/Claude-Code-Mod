@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { SPIN } from './bars'
-import { parseDf, validHost } from './disk'
+import { diskTarget, parseDf } from './disk'
 import { hookBlock } from './blocks'
 import { applyNotifications, backgroundId, notifications } from './jobs'
 
@@ -210,13 +210,72 @@ test('Hook block is read from the hook error, plain errors are not blocks', () =
   expect(hookBlock('ssh: connect to host mini port 22: Operation timed out', false)).toBe(null)
 })
 
-// How it can fail: the host env var smuggles an ssh option, or a valid alias is refused
-test('Disk host only takes plain host names', () => {
-  expect(validHost('mini')).toBe('mini')
-  expect(validHost(' dom@mini.local ')).toBe('dom@mini.local')
-  expect(validHost('-oProxyCommand=touch /tmp/x')).toBe(null)
-  expect(validHost('mini; rm -rf ~')).toBe(null)
-  expect(validHost(undefined)).toBe(null)
+// How it can fail: the host env var smuggles an ssh option, a valid alias is refused, or a refused one falls back silently
+test('Disk host only takes plain host names, a refused one is flagged', () => {
+  expect(diskTarget('mini')).toEqual({ host: 'mini', invalid: false })
+  expect(diskTarget(' dom@mini.local ')).toEqual({ host: 'dom@mini.local', invalid: false })
+  expect(diskTarget('-oProxyCommand=touch /tmp/x')).toEqual({ host: null, invalid: true })
+  expect(diskTarget('mini; rm -rf ~')).toEqual({ host: null, invalid: true })
+  expect(diskTarget(undefined)).toEqual({ host: null, invalid: false })
+})
+
+test('Invalid disk host: shown as such, nothing is run', async ($, on) => {
+  const clock = world(on, { LEITSTAND_DISK_HOST: '-oProxyCommand=x' })
+  let runs = 0
+  on('process.run', () => { runs++; return ran(REAL) })
+  await $.command.run({ command: 'stand', args: '' })
+  await $.command.run({ command: 'stand', args: '' })
+  await clock.settle()
+  expect(await band($)).toContain('invalid disk host')
+  expect(runs).toBe(0)
+})
+
+// How it can fail: a failed measurement keeps showing the old number as if it were fresh
+test('Failed measurement keeps the last value, marked stale', async ($, on) => {
+  const clock = world(on, { LEITSTAND_THEME: 'quiet', LEITSTAND_DISK_HOST: 'mini' })
+  let ok = true
+  on('process.run', () => (ok ? ran(REAL.replace('76757888    84%', '25000000    95%')) : ran('', 255, 'ssh: timed out')))
+  await $.command.run({ command: 'stand', args: '' })
+  await clock.settle()
+  expect(await band($)).toContain('95 %')
+  ok = false
+  await $.command.run({ command: 'stand', args: '' })
+  await $.command.run({ command: 'stand', args: '' })
+  await clock.settle()
+  const t = await band($)
+  expect(t).toContain('24 GB free')
+  expect(t).toContain('stale')
+})
+
+// How it can fail: a start that throws stays "running" forever
+test('A start that throws leaves no job behind', async ($, on) => {
+  world(on, {})
+  on('tool.call', () => { throw new Error('boom') })
+  await expect($.tool.call({ tool: 'Bash', command: 'x', description: 'Caltrack Build 32', run_in_background: true, tool_use_id: 't1' } as never)).rejects.toThrow()
+  expect(await band($)).toBe('')
+})
+
+const NOTIFY = (raw: string) => ({ text: raw, wait: false, origin: { kind: 'task-notification' } })
+// How it can fail: pasted notification text ends a job, a real one does not, or an early one is lost
+test('Only engine-stamped notifications end jobs, early ones wait for their job', async ($, on) => {
+  world(on, {})
+  on('prompt.submit', (_: unknown, e: any) => ({ text: e.text }))
+  let id = 0
+  on('tool.call', () => ({ result: {}, text: `Command running in background with ID: b${++id}.` }))
+  for (const d of ['Caltrack Build 32', 'Session-Scan'])
+    await $.tool.call({ tool: 'Bash', command: 'x', description: d, run_in_background: true, tool_use_id: d } as never)
+  await $.prompt.submit({ text: NOTE('b1', 'completed'), wait: false, origin: { kind: 'composer' } } as never)
+  expect(await band($)).toContain('2 running')
+  await $.prompt.submit(NOTIFY(NOTE('b2', 'completed') + NOTE('b3', 'failed')) as never)
+  let t = await band($)
+  expect(t).toContain('1 running')
+  expect(t).toContain('1 done')
+  // b3's ending came before b3 existed
+  await $.tool.call({ tool: 'Bash', command: 'x', description: 'Preview deploy', run_in_background: true, tool_use_id: 'pd' } as never)
+  t = await band($)
+  expect(t).toContain('Preview deploy')
+  expect(t).toContain('failed')
+  expect(t).toContain('1 running')
 })
 
 // How it can fail: the prompt a task notification raises clears the job it just ended

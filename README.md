@@ -20,7 +20,7 @@ claude plugin marketplace add dominikmartn/leitstand
 claude plugin install leitstand@leitstand
 ```
 
-Start a new session. Needs a Claude Code version with mods (TypeScript plugin hooks).
+Start a new session. Needs Claude Code with mods (TypeScript plugin hooks); tested with Claude Code 2.1.288 on macOS.
 
 ## Two themes
 
@@ -50,7 +50,7 @@ export LEITSTAND_THEME=quiet
 | `LEITSTAND_DISK_HOST` | unset | an ssh host to measure instead of this machine, e.g. a build server |
 | `LEITSTAND_SOUND` | on | `off` mutes the done sound |
 
-The disk host is passed to `ssh -o BatchMode=yes`, so it needs key-based login. Only plain host names are accepted.
+The disk host is passed to `ssh -o BatchMode=yes`, so it needs key-based login. Only plain host names are accepted; anything else shows `invalid disk host` instead of quietly measuring the local disk. When a measurement fails, the last value stays with `stale` beside it.
 
 ## Develop
 
@@ -58,5 +58,7 @@ The disk host is passed to `ssh -o BatchMode=yes`, so it needs key-based login. 
 CLAUDE_CODE_PLUGIN_DIRS=$PWD claude
 claude plugin test .
 ```
+
+The editor types live in `.claude-plugin/types/`. Claude Code's plugin tooling generates them; they are not committed.
 
 Made by [@dominikmartn](https://x.com/dominikmartn)

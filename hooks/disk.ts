@@ -7,10 +7,14 @@ export type Level = 'ok' | 'warn' | 'bad'
 // macOS keeps user data on its own volume; `/` there is the sealed system volume
 export const DF = 'df -kP /System/Volumes/Data 2>/dev/null || df -kP /'
 
-// LEITSTAND_DISK_HOST is handed to ssh as one argv entry; refuse anything that could read as an option
-export function validHost(h: string | undefined): string | null {
-  const t = h?.trim()
-  return t && /^[A-Za-z0-9][A-Za-z0-9._@-]*$/.test(t) ? t : null
+export type Target = { host: string | null; invalid: boolean }
+
+// LEITSTAND_DISK_HOST is handed to ssh as one argv entry; refuse anything that could read as an option.
+// Set but refused is an error to show, not a silent fallback to the local disk.
+export function diskTarget(raw: string | undefined): Target {
+  const t = raw?.trim()
+  if (!t) return { host: null, invalid: false }
+  return /^[A-Za-z0-9][A-Za-z0-9._@-]*$/.test(t) ? { host: t, invalid: false } : { host: null, invalid: true }
 }
 
 // `df -kP`: Filesystem 1024-blocks Used Available Capacity Mounted on (macOS without -P adds inode columns)

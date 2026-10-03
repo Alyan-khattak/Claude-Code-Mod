@@ -3,10 +3,10 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { Disk, Job } from '../types'
 import type { Level } from './disk'
-import { DF, level, needsYou, parseDf, validHost } from './disk'
+import { DF, diskTarget, level, needsYou, parseDf } from './disk'
 import { DOT, loudMeter, loudScanner, loudStub, meter, scanner, SPIN } from './bars'
 import { hookBlock } from './blocks'
-import { applyNotifications, backgroundId, elapsed, running, summary } from './jobs'
+import { applyEndings, backgroundId, elapsed, notifications, running, summary } from './jobs'
 
 const disk = atom({ plugin: 'leitstand', key: 'disk' } as const, null)
 const jobs = atom({ plugin: 'leitstand', key: 'jobs' } as const, [])
@@ -16,6 +16,7 @@ const frame = atom({ plugin: 'leitstand', key: 'frame' } as const, 0)
 const ctx = atom({ plugin: 'leitstand', key: 'ctx' } as const, null)
 const block = atom({ plugin: 'leitstand', key: 'block' } as const, null)
 const diskSeen = atom({ plugin: 'leitstand', key: 'diskSeen' } as const, 'ok')
+const early = atom({ plugin: 'leitstand', key: 'early' } as const, [])
 
 // Mid tones: readable on light and dark terminals
 const C = { clay: '#d97757', ok: '#4fa86b', warn: '#d08a1e', bad: '#d9534f', track: '#8a8580' }
@@ -30,14 +31,24 @@ type Theme = 'loud' | 'quiet'
 const theme = async ($: EngineInterface): Promise<Theme> => ((await $.env.get('LEITSTAND_THEME'))?.trim() === 'quiet' ? 'quiet' : 'loud')
 
 // Local disk by default; LEITSTAND_DISK_HOST measures another machine over ssh
-const host = async ($: EngineInterface) => validHost(await $.env.get('LEITSTAND_DISK_HOST'))
+const target = async ($: EngineInterface) => diskTarget(await $.env.get('LEITSTAND_DISK_HOST'))
+const host = async ($: EngineInterface) => (await target($)).host
+const INVALID_HOST = 'LEITSTAND_DISK_HOST is not a plain host name'
+// One session measures, the others wait for its result
+const LEASE_MS = 20 * 1000
 const dfArgv = (hn: string | null) => (hn ? ['ssh', '-o', 'ConnectTimeout=5', '-o', 'BatchMode=yes', hn, DF] : ['sh', '-c', DF])
 const storeKey = (hn: string | null) => hn ?? 'local'
 
 async function measure($: EngineInterface): Promise<void> {
   const at = await $.clock.now()
-  const hn = await host($)
+  const { host: hn, invalid } = await target($)
   let error: string
+  if (invalid) {
+    await update($, disk, () => ({ pct: null, freeGb: null, at, error: INVALID_HOST }))
+    return
+  }
+  // ponytail: the store has no compare-and-set, so two sessions can still both measure within the same instant; newer-wins below keeps the result right
+  await $.store.set(`disk-lease:${storeKey(hn)}`, at + LEASE_MS)
   try {
     const run = await $.process.run(dfArgv(hn), { timeoutMs: 15000 })
     const parsed = run.exitCode === 0 ? parseDf(run.stdout) : null
@@ -45,7 +56,8 @@ async function measure($: EngineInterface): Promise<void> {
       const before = await read($, disk)
       const next: Disk = { ...parsed, at, error: null }
       await update($, disk, () => next)
-      await $.store.set(`disk:${storeKey(hn)}`, next)
+      const stored = (await $.store.get(`disk:${storeKey(hn)}`)) as Disk | undefined
+      if (!stored || stored.at <= at) await $.store.set(`disk:${storeKey(hn)}`, next)
       if (level(parsed.freeGb) === 'bad' && level(before?.freeGb ?? null) !== 'bad') {
         $.ui.toast(`${hn ?? 'Disk'} at ${parsed.pct} %, only ${parsed.freeGb} GB free`)
       }
@@ -55,8 +67,8 @@ async function measure($: EngineInterface): Promise<void> {
   } catch (err) {
     error = err instanceof Error ? err.message : String(err)
   }
-  // Keep the last good value, only note the error
-  await update($, disk, prev => ({ pct: prev?.pct ?? null, freeGb: prev?.freeGb ?? null, at, error }))
+  // Keep the last good value and its time, only note the error; the row marks it stale
+  await update($, disk, prev => ({ pct: prev?.pct ?? null, freeGb: prev?.freeGb ?? null, at: prev?.at ?? at, error }))
 }
 
 // All sessions share one measurement: only measure when the stored one is stale
@@ -70,6 +82,8 @@ async function refreshDisk($: EngineInterface): Promise<void> {
     await update($, disk, () => shared)
     return
   }
+  const lease = Number((await $.store.get(`disk-lease:${key}`)) ?? 0)
+  if (lease > t) return
   await measure($)
 }
 
@@ -104,6 +118,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'stand', description: 'Toggle the list: what is running and what needs you' })
     void refreshDisk($)
+    if ((await target($)).invalid) $.ui.toast(INVALID_HOST)
     $.clock.every(60 * 1000, () => void refreshDisk($))
     $.clock.every(1000, () => void tick($))
     // Spinner and scanner: only animate while something runs
@@ -129,7 +144,14 @@ export const register: Register = on => {
     const startedAt = await $.clock.now()
     await update($, jobs, list => [...list, { id: tmp, kind: isAgent ? 'agent' : 'bash', label, startedAt, endedAt: null, status: 'running' } as Job])
 
-    const ran = await next(e)
+    let ran: Awaited<ReturnType<typeof next>>
+    try {
+      ran = await next(e)
+    } catch (err) {
+      // The start threw: it never ran, so it must not stay "running"
+      await update($, jobs, list => list.filter(j => j.id !== tmp))
+      throw err
+    }
     await noteBlock($, ran)
     const text = 'text' in ran && typeof ran.text === 'string' ? ran.text : ''
     const bg = backgroundId(text)
@@ -137,16 +159,14 @@ export const register: Register = on => {
     const neverStarted = 'deny' in ran || ('isError' in ran && ran.isError === true)
     // Blocked, or already finished in the foreground: nothing left to show
     await update($, jobs, list => (neverStarted || !bg ? list.filter(j => j.id !== tmp) : list.map(j => (j.id === tmp ? { ...j, id: bg } : j))))
-    return ran
-  })
-
-  on('session.append', async ($, e, next) => {
-    const raw = JSON.stringify(e.message.content)
-    if (!e.agentId && raw.includes('<task-notification>')) {
+    // Its ending may have arrived first
+    const pending = bg ? (await read($, early)).filter(d => d.id === bg) : []
+    if (pending.length) {
       const at = await $.clock.now()
-      await update($, jobs, list => applyNotifications(list, raw, at))
+      await update($, jobs, list => applyEndings(list, pending, at).list)
+      await update($, early, list => list.filter(d => d.id !== bg))
     }
-    return next(e)
+    return ran
   })
 
   // Sound only when it is your turn: nothing runs any more, and it took a while. Once per prompt.
@@ -159,8 +179,16 @@ export const register: Register = on => {
     return next(e)
   })
 
-  // Your next prompt means you saw what ended. Task notifications also arrive as prompts and must not count.
+  // Endings are read only from prompts the engine stamped as task notifications: text a user pastes cannot end a job.
+  // Your own next prompt means you saw what ended.
   on('prompt.submit', async ($, e, next) => {
+    if (e.origin?.kind === 'task-notification') {
+      const at = await $.clock.now()
+      const { list, unmatched } = applyEndings(await read($, jobs), notifications(e.text), at)
+      await update($, jobs, () => list)
+      // Keep only a few: an ending for a job started before this session never finds its row
+      if (unmatched.length) await update($, early, prev => [...prev, ...unmatched].slice(-20))
+    }
     if (!HUMAN.has(e.origin?.kind ?? 'composer')) return next(e)
     workStart = await $.clock.now()
     await update($, block, () => null)
@@ -255,12 +283,14 @@ export const register: Register = on => {
 
     // Seen means calm: no "needs you", just the numbers in the warning color
     const diskRow = (hint = false) => !d || !diskShown ? null : d.pct === null
-      ? <Row mark=" " color={C.track} state="disk" label={hostName ? `${hostName} unreachable` : 'disk unreadable'} bar={empty} right="" />
+      ? <Row mark=" " color={C.track} state="disk" label={d.error === INVALID_HOST ? 'invalid disk host' : hostName ? `${hostName} unreachable` : 'disk unreadable'} bar={empty} right="" />
       : (() => {
         const [body, rest] = (loud ? loudMeter : meter)(d.pct, W.bar)
         const bar = [<Text color={diskColor}>{body}</Text>, <Track s={rest} />]
-        if (diskNeeds) return <Row mark="!" color={diskColor} state="needs you" label={`${diskName} · ${d.freeGb} GB free`} bar={bar} right={`${d.pct} %`} bold hint={hint} />
-        return <Row mark=" " color={diskColor} state={loud ? '' : 'disk'} label={`${loud ? diskName : hostName ?? 'disk'} · ${d.freeGb} GB free`} bar={bar} right={`${d.pct} %`} />
+        // Last measurement failed: the old value stays, marked as stale
+        const diskRight = d.error ? 'stale' : `${d.pct} %`
+        if (diskNeeds) return <Row mark="!" color={diskColor} state="needs you" label={`${diskName} · ${d.freeGb} GB free`} bar={bar} right={diskRight} bold hint={hint} />
+        return <Row mark=" " color={diskColor} state={loud ? '' : 'disk'} label={`${loud ? diskName : hostName ?? 'disk'} · ${d.freeGb} GB free`} bar={bar} right={diskRight} />
       })()
 
     const ctxRow = (hint = false) => !ctxShown || !c ? null : (() => {
