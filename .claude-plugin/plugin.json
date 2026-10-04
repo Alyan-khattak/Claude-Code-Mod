@@ -1,9 +1,9 @@
 {
-  "name": "leitstand",
+  "name": "Claude-Code-Mod",
   "version": "0.2.1",
   "description": "A control room above your prompt: background agents and shells, disk space and context at a glance. Two themes, loud and quiet. /stand toggles the list.",
   "author": { "name": "Dominik Martin", "url": "https://x.com/dominikmartn" },
-  "homepage": "https://github.com/dominikmartn/leitstand",
+  "homepage": "https://github.com/Alyan-khattak/Claude-Code-Mod",
   "license": "MIT",
   "types": "./types/index.d.ts"
 }
