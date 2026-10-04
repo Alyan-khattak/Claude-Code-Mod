@@ -116,7 +116,7 @@ const kTok = (n: number) => (n >= 1_000_000 ? `${Math.round(n / 100_000) / 10}M`
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'stand', description: 'Toggle the list: what is running and what needs you' })
+    await $.command.register({ name: 'status', description: 'Toggle the list: what is running and what needs you' })
     void refreshDisk($)
     if ((await target($)).invalid) $.ui.toast(INVALID_HOST)
     $.clock.every(60 * 1000, () => void refreshDisk($))
