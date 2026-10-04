@@ -3,14 +3,12 @@
     "owner": {
       "name": "Alyan-khattak"
     },
-    "description": "Claude-Code-Mod, a control room above your Claude
-  Code prompt. Forked from leitstand by Dominik Martin.",
+    "description": "Claude-Code-Mod, a control room above your Claude Code prompt. Forked from leitstand by Dominik Martin.",
     "plugins": [
       {
         "name": "Claude-Code-Mod",
         "source": "./",
-        "description": "A control room above your prompt. Two themes,
-  loud and quiet."
+        "description": "A control room above your prompt. Two themes loud and quiet."
       }
     ]
   }
