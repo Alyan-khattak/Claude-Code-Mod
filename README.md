@@ -35,7 +35,7 @@ Job rows show state, name, a bar and the elapsed time. Resource rows show how mu
 - **disk**: free space on this machine. The bar and the percent show how much is used. It warns at 35 GB free and turns red at 20 GB.
 - **context**: tokens used of the session's window. From 250k tokens on, the row turns yellow and says `compact`, as a reminder to run `/compact`. Leitstand never compacts by itself.
 
-Type `/stand` to open or close the list. Closing it clears finished jobs and acknowledges the disk warning. The warning comes back when free space drops to the next level (20 GB).
+Type `/status` to open or close the list. Closing it clears finished jobs and acknowledges the disk warning. The warning comes back when free space drops to the next level (20 GB).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/loud-warn-dark.png">
