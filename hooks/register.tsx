@@ -8,15 +8,15 @@ import { DOT, loudMeter, loudScanner, loudStub, meter, scanner, SPIN } from './b
 import { hookBlock } from './blocks'
 import { applyEndings, backgroundId, elapsed, notifications, running, summary } from './jobs'
 
-const disk = atom({ plugin: 'leitstand', key: 'disk' } as const, null)
-const jobs = atom({ plugin: 'leitstand', key: 'jobs' } as const, [])
-const open = atom({ plugin: 'leitstand', key: 'open' } as const, null)
-const now = atom({ plugin: 'leitstand', key: 'now' } as const, 0)
-const frame = atom({ plugin: 'leitstand', key: 'frame' } as const, 0)
-const ctx = atom({ plugin: 'leitstand', key: 'ctx' } as const, null)
-const block = atom({ plugin: 'leitstand', key: 'block' } as const, null)
-const diskSeen = atom({ plugin: 'leitstand', key: 'diskSeen' } as const, 'ok')
-const early = atom({ plugin: 'leitstand', key: 'early' } as const, [])
+const disk = atom({ plugin: 'Claude-Code-Mod', key: 'disk' } as const, null)
+const jobs = atom({ plugin: 'Claude-Code-Mod', key: 'jobs' } as const, [])
+const open = atom({ plugin: 'Claude-Code-Mod', key: 'open' } as const, null)
+const now = atom({ plugin: 'Claude-Code-Mod', key: 'now' } as const, 0)
+const frame = atom({ plugin: 'Claude-Code-Mod', key: 'frame' } as const, 0)
+const ctx = atom({ plugin: 'Claude-Code-Mod', key: 'ctx' } as const, null)
+const block = atom({ plugin: 'Claude-Code-Mod', key: 'block' } as const, null)
+const diskSeen = atom({ plugin: 'Claude-Code-Mod', key: 'diskSeen' } as const, 'ok')
+const early = atom({ plugin: 'Claude-Code-Mod', key: 'early' } as const, [])
 
 // Mid tones: readable on light and dark terminals
 const C = { clay: '#d97757', ok: '#4fa86b', warn: '#d08a1e', bad: '#d9534f', track: '#8a8580' }
@@ -215,7 +215,7 @@ export const register: Register = on => {
       await update($, jobs, running)
     }
     else void measure($)
-    return { text: '' }  
+    return { text: ' ' }  
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {

@@ -17,7 +17,7 @@ export type Job = {
 
 declare module 'claude-code' {
   interface PluginState {
-    leitstand: {
+    'Claude-Code-Mod': {
       disk: Disk | null
       jobs: Job[]
       // null: the theme decides (loud shows the list, quiet folds it)
