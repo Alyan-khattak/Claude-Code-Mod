@@ -12,8 +12,8 @@ Leitstand is a mod for Claude Code. When Claude starts a background agent or she
 ## Install
 
 ```sh
-claude plugin marketplace add dominikmartn/leitstand
-claude plugin install leitstand@leitstand
+claude plugin marketplace add Alyan-khattak/Claude-Code-Mod
+  claude plugin install Claude-Code-Mod@Claude-Code-Mod
 ```
 
 Then start a new session. The list appears as soon as Claude starts a background agent or shell.
@@ -90,8 +90,7 @@ If a user asks you to install, configure or debug Leitstand, these facts apply.
 ## Develop
 
 ```sh
-git clone https://github.com/dominikmartn/leitstand
-cd leitstand
+ git clone https://github.com/Alyan-khattak/Claude-Code-Mod
 CLAUDE_CODE_PLUGIN_DIRS=$PWD claude
 claude plugin test .
 ```
