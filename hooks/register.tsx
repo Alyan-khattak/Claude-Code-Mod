@@ -204,7 +204,7 @@ export const register: Register = on => {
     return next(e)
   })
 
-  on('command.run', { command: 'stand' }, async $ => {
+  on('command.run', { command: 'dashboard' }, async $ => {
     const wasOpen = (await read($, open)) ?? (await theme($)) === 'loud'
     await update($, open, () => !wasOpen)
     // Folding means seen: the disk warning goes quiet, ended jobs leave
@@ -254,7 +254,7 @@ export const register: Register = on => {
     const diskName = twoCols ? (hostName ?? 'disk') : hostName ? `${hostName} disk` : 'disk'
 
     const Track = ({ s: str }: { s: string }) => <Text color={C.track} dimColor>{str}</Text>
-    const Hint = () => <Text dimColor>{'     /stand'}</Text>
+    const Hint = () => <Text dimColor>{'     /dashboard'}</Text>
     const Row = ({ mark, color, state, label, bar, right, bold, hint }: { mark: string; color: string; state: string; label: string; bar: unknown; right: string; bold?: boolean; hint?: boolean }) => (
       <Box>
         <Text color={color}>{mark} </Text>
@@ -323,7 +323,7 @@ export const register: Register = on => {
       if (s.done) parts.push(<Text><Text color={C.ok}>✓ </Text>{s.done} done</Text>)
       if (s.needs) parts.push(<Text color={C.warn} bold>! {s.needs} needs you</Text>)
       const joined = parts.flatMap((p, i) => (i ? [<Text dimColor>{'  ·  '}</Text>, p] : [p]))
-      // Nothing to count: /stand hangs on the last row instead of standing alone
+      // Nothing to count: /dashboard hangs on the last row instead of standing alone
       const hang = parts.length ? null : g ? 'block' : !isOpen && ctxHigh ? 'ctx' : null
       return (
         <Box flexDirection="column">
