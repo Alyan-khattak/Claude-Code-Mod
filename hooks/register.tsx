@@ -215,7 +215,7 @@ export const register: Register = on => {
       await update($, jobs, running)
     }
     else void measure($)
-    return {}
+    return { text: '' }  
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
