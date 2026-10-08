@@ -172,6 +172,16 @@ export const register: Register = on => {
   // Sound only when it is your turn: nothing runs any more, and it took a while. Once per prompt.
   let workStart = 0
   on('turn.complete', async ($, e, next) => {
+    if (e.agentId === undefined) {
+      const at = await $.clock.now()
+      await update($, jobs, list =>
+        list.map(j =>
+          j.kind === 'agent' && j.status === 'running'
+            ? { ...j, status: 'done' as Job['status'], endedAt: at }
+            : j
+        )
+      )
+    }
     if (workStart && !running(await read($, jobs)).length && (await $.clock.now()) - workStart >= LONG_MS) {
       void ding($)
       workStart = 0
@@ -220,6 +230,7 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
+    const below = await next(e)
     const th = await theme($)
     const all = await read($, jobs)
     const live = running(all)
@@ -238,7 +249,7 @@ export const register: Register = on => {
     const c = c0 && typeof c0 === 'object' ? c0 : null
     const ctxHigh = c !== null && c.tokens >= CTX_SHOW
     const active = s.running + s.done + s.needs > 0 || !!g || ctxHigh
-    if (!active && explicit !== true) return next(e)
+    if (!active && explicit !== true) return below
 
     const { Box, Text } = $.ui.resolve(e)
     const loud = th === 'loud'
@@ -327,6 +338,7 @@ export const register: Register = on => {
       const hang = parts.length ? null : g ? 'block' : !isOpen && ctxHigh ? 'ctx' : null
       return (
         <Box flexDirection="column">
+          {below}
           {list}
           {!isOpen && ctxHigh && ctxRow(hang === 'ctx')}
           {blockLine(hang === 'block')}
@@ -348,6 +360,7 @@ export const register: Register = on => {
     const last = isOpen || parts.length ? null : g ? 'block' : ctxHigh ? 'ctx' : 'disk'
     return (
       <Box flexDirection="column">
+        {below}
         {list}
         {diskNeeds && !isOpen && diskRow(last === 'disk')}
         {ctxHigh && !isOpen && ctxRow(last === 'ctx')}
